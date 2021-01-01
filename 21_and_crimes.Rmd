@@ -1,0 +1,332 @@
+---
+title: "21st birthdays come with more Assault, Rape, and Murder arrests"
+author: "Sharon Allman, Diego Mamanche Castellanos & Ke-Li Chiu"
+date: "11/04/2020"
+output:
+  pdf_document:
+    latex_engine: xelatex
+abstract: "Through the replication data from The Minimum Legal Drinking Age and Crime by Christopher Carpenter and Carlos Dobkin (2015), we sought to elaborate on the findings of Billings (2014) in their research on the age-prohibition of alcohol and potentially increased propensity for crime.  We found that the most alcohol-consumption-related crimes of assault, rape, and murder all had statistically significant increases at age 21, while arson did not have a statistically significant increase. "
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, include = FALSE)
+```
+
+```{r message=FALSE, warning=FALSE}
+#import libraries
+library(broom)
+library(tidyverse)
+library(gridExtra)
+library(pastecs)
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(reshape2)
+library(stringr)
+library(knitr)
+library(huxtable)
+library(jtools)
+```
+
+# Introduction
+
+It is always a contentious topic whether we should revise the legal drinking age.  This can be impacted by things such as an argued increased propensity for a spike in crime near the legal drinking age, especially crimes committed under the influence in alcohol.  Previous studies have inconsistent findings when it comes to whether an increased availability of alcohol leads to an increase in certain types of offences such as assault, rape, and more.  However, it is important to further the research on alcohol-related offenses, especially when it comes to the potential to decrease youth offences.   
+
+Within a Canadian context, a study by Callaghan et al. had striking findings that suggested that the drinking age of 18 or 19 depending on province of residence could be problematic in the sense that there was a demonstrable increase of crime at the legal drinking age (Callaghan et al., 2016).  The drinking ages in Canada are comparatively low to 21 years old in the U.S.  Using the replication data of The Minimum Legal Drinking Age and Crime by Christopher Carpenter and Carlos Dobkin (2015), we sought to elaborate the findings of Billings (2014) in their research on the age-prohibition of alcohol and potentially increased propensity for crime.  
+
+Following the Billings’ (2014) findings of crimes associated with high-alcohol usage, we intend to examine the effects of legal access to alcohol on arrests counts on the four high-alcohol usage crimes— assault, rape, murder, and arson. We found that the most alcohol-consumption-related crimes of assault, rape, and murder all had statistically significant increases at age 21, while arson did not have a statistically significant increase.    
+
+
+# Research Question & Hypotheses
+
+Within this research, we were interested in examining whether there is an effect of an increase in certain types of crimes after perpetrators reach the U.S. legal drinking age (21).  This could be for a variety of reasons, most importantly being easier access to alcohol and how that could lead to a spike of crimes committed while the perpetrator was intoxicated.   
+
+H0: The U.S. legal drinking age has no significant effect on the incidence of certain crimes. 
+
+H1: The U.S. legal drinking age has a significant effect on the incidence of certain crimes.   
+
+H2: The U.S. legal drinking age has a significant positive effect on the incidence of certain crimes (whereby it causes an increase in occurrence).    
+
+
+# Dataset Description and Data Cleaning
+
+The dataset is the replication data of The Minimum Legal Drinking Age and Crime by Christopher Carpenter and Carlos Dobkin (2015). The dataset contains 2922 observations and 144 variables. The observation is arrestee’s age in days relative to 21 on the day being arrested ranging from 17 to 24. For example, -30 indicates that the arrestee is a month away from turning 21, 60 indicates that the arrestee is 21 and two months old and 0 means the arrestee is arrested on their 21st birthday. The original crimes data was retrieved from California’s Monthly Arrest and Citation Register dated from 1979 to 2006, containing major crime types categorized by FBI: violent crime, alcohol-related offenses, property crime, illegal drug possession or sale, and all other offenses. The dataset contains the counts of arrests as well the arrest rates per 10,000 person-years for each crime for each observation. For our study, we followed the bandwidth of two years Carpenterr and Dobkin used; we sliced the dataset to include observations of people age 19 to 22 inclusive (from day -730 to day 729).  
+
+An additional binary variable called mlda_and_over was created based on the days_to_21 variable, classifying MLDA and over as 1, and under MLDA as 0. Finally, the dataset was filtered by the columns with the high-alcohol usage crimes under analysis (Assault, Rape, Murder, and Arson). 
+
+The distribution and descriptive statistics of the high-alcohol usage crimes is shown in Figure 1.   
+
+```{r import_data}
+# setwd("~/Experimental Design for Data Science/ProblemSet5")
+drinking <- read.csv("P01 Age Profile of Arrest Rates 1979-2006.csv")
+drinking <- janitor::clean_names(drinking) 
+head(drinking)
+```
+
+```{r create top4_crimes_19_to_23}
+#Create a dataframe with the High-alcohol usage crimes 
+top4_crimes_19_to_23 <- filter(drinking, days_to_21 > -730 & days_to_21 < 730)
+top4_crimes_19_to_23 <- select(top4_crimes_19_to_23, days_to_21, 
+                               assault_r, rape_r, murder_r, arson_r)
+#Create the dummy variable
+top4_crimes_19_to_23 <- 
+  top4_crimes_19_to_23 %>% 
+  mutate(mlda_and_over = if_else(days_to_21 < 0, 0, 1)) 
+```
+
+
+```{r include=FALSE, message=FALSE, fig.height = 3, fig.width = 4, warning=FALSE} 
+# Compute descriptive statistics - boxplots
+ggplot(top4_crimes_19_to_23) +
+  aes(y = assault_r) +
+  geom_boxplot() +
+  labs(x = "", y = "Assault rate") -> p1
+ggplot(top4_crimes_19_to_23) +
+  aes(y = rape_r) +
+  geom_boxplot() +
+  labs(x = "", y = "Rape rate") -> p2
+ggplot(top4_crimes_19_to_23) +
+  aes(y = murder_r) +
+  geom_boxplot() +
+  labs(x = "", y = "Murder rate") -> p3
+ggplot(top4_crimes_19_to_23) +
+  aes(y = arson_r) +
+  geom_boxplot() +
+  labs(x = "", y = "Arson rate") -> p4
+grid1 <- grid.arrange(p1, p2, p3, p4, ncol = 2, nrow = 2)
+```
+
+```{r descriptive_table, include=FALSE, message=FALSE, fig.height = 5, fig.width = 12, warning=FALSE}
+# Select only top4
+only_top4 <- top4_crimes_19_to_23
+# Compute descriptive statistics - table
+tt1 <- ttheme_default()
+stats_table <- stat.desc(top4_crimes_19_to_23)
+stats_table <- round(stats_table, 2)
+stats_table <- mutate(stats_table, stats = row.names(stats_table))
+stats_table <- select(stats_table, stats, days_to_21, mlda_and_over, 
+                      assault_r, rape_r, murder_r, arson_r)
+colnames(stats_table) <- c("stats","days_to_21 ","mlda_and_over","assault","rape","murder","arson")
+grid2 <- grid.arrange(tableGrob(stats_table, theme = tt1, rows = NULL), ncol = 1, nrow = 1)
+```
+
+```{r include=TRUE, fig.height = 4, fig.width = 11, warning=FALSE}
+# Join the boxplots and the table 
+grid.arrange(arrangeGrob(grid1, ncol=1, nrow=1),
+         arrangeGrob(grid2, ncol=1, nrow=1), heights=c(15,1), widths=c(1,2), 
+         bottom = "Figure 1: Descriptive statistics of the data")
+```
+
+# Method
+
+Because the purpose of this paper is to validate the effect of the Minimum Legal Drinking Age (MLDA) over the most alcohol-influenced crimes, we conducted a Regression Discontinuity Design (RDD). The RDD estimates impact around the eligibility cutoff, in our case MLDA, as the difference between the average outcome for units on the treated side (MLDA and over) of the eligibility cutoff and the average outcome of units on the untreated (under MLDA) side of the cutoff (MLDA). 
+
+According to the researchers of our reference study (Billings, 2014), after applying their research through several surveys to inmates and other techniques, they found the fifteen most affected crimes by alcohol consumption. For this investigation, we focused on the crimes classified as high-alcohol usage from that paper. These are Assault, Rape, Arson, and Murder, based on the role alcohol plays when an offender commits a given crime. 
+
+
+# Ethical Issues
+
+In terms of the method used to collect this data, it should be fairly accurate as it comes directly from a crime registry.  Individuals are not personally identified within the aggregated data but are identified within their own criminal records.  This means that this data cannot be fully anonymous, as it is based on criminal records that can be sourced if needed.  It is also unlikely that the individuals within this data had explicitly provided informed consent to have their data used in studies such as this.  In turn, they would not be easily able to request that their information be removed.   
+
+The findings of studies like this can have grave policy implications at a national level.  One of the major ethical considerations within this study is the need to accurately and completely represent the findings of the data.  As this data relates to the need to properly control and regulate alcohol, it is important that we do not overrepresent the gravity or implications of our findings.  There is evidence that suggests about 90% of the youth binge-drinking that occurs in the U.S. happens when individuals are underage.  Binge drinking can carry its own host of risks including but not limited to personal injury, death, or a lower inhibition when it comes to engaging in criminal activity or assault (Peterson, 2015).  If it is true that there is an increase in certain crimes at the drinking age or with increased alcohol use/access, there is a delicate balance between a potential increase in youth offences if the drinking age is lowered verses an economic implication if the drinking age is raised.  However, it may be the case that this data does not have high enough external validity in order to make any overarching claims about alcohol and its effect on certain criminal offences, as it is extremely location-sensitive and limited by the number of cases and how the data was collected.   
+
+Additionally, it is very difficult to study the actual effect of alcohol consumption on crime rate due to the many confounding variables that could impact this relationship.  It is hard to construct a variable or set of variables that would perfectly correspond to the idea that a perpetrator has committed a crime because they were drunk, especially considering all the other factors that could lead someone to commit a drunken offence.  For example, if a 21-year-old man gets drunk at a bar for the first time and starts a fight, it would be hard to pinpoint in any exact terms that he assaulted someone because he was drunk, rather than other factors having more of an impact (new and different social setting, trying to prove that they are macho, trying to impress a girl, person is just more prone to antisocial behaviour in general, etc.).  This is an additional reason as to why research like this needs to be clear in its intent and findings, as it could be misrepresented or used by certain groups to push their own agendas.   
+
+Gathering this kind of data can be difficult and lead to inconsistencies.  Much of the data related to alcohol and its relationship to offences is self-reported by the victim, police, or the perpetrator after the fact, so it is no surprise that there are inconsistent findings amongst research of this topic.  Having inconsistent findings in a field of research such as this can often make it more difficult to have confidence in your findings, as the literature itself can often both reinforce and contradict what you find in your own dataset.  This is something that needs to be effectively communicated within a study, in an attempt to further reduce the risk of readers either accidentally or intentionally misrepresenting or misunderstanding your findings.   
+
+# Weaknesses and Limitations
+
+## Limitations of the dataset 
+
+The original data was collected from California’s Monthly Arrest and Citation Register (MACR) for the period 1979 to 2006 and California Health Interview Survey (CHIS). To validate the replication, we would need access to both MACR and CHIS. However, their data is not accessible to the public without permission. Therefore, we do not have the freedom in data transformation, and we are assuming the process of data collection and transformation to generate this replication dataset is reliable. 
+
+One limitation of this data set is that there is no variable for actual alcohol consumption. Although many studies have stated that there is high correlation between alcohol consumption and crime rate, we cannot know if there is significant number of individuals observed in this dataset who have committed their crimes under the influence of alcohol. Even if the usage of alcohol was proven, the effect of alcohol on crime arrest rate could be explained in a plethora of different ways. Moreover, in order to retrieve the age information, the dataset relies on arrest data instead of reported crimes data. The concern raised by the data collection is that alcohol use might be increasing the chance of being arrested, not the crime commission.  
+
+## Limitations in the approach 
+
+External validity of estimates is hard to assess with regression discontinuity design (cite Rohan) because the estimates are valid only for observations very near the cutoff points. In our case, the estimates can only be applied to people who are very near their 21st birthday. 
+
+The age cut-off is not unique to legal drinking age and could be contaminated by other rights and responsibilities an individual obtains once they have turned 21. For example, when an individual is 21 years old, they can legally drink at restaurants, bars, and pubs. In this case, it is difficult to clarify whether it is the alcohol consumption, the increased social interaction, or the combination of the two that increases crime incidents. 
+
+Another weakness in our approach is that “birthday celebration effect” that is observed by the author of the dataset where crime arrest rates have pronounced peaks in arrestees’ 19th, 20th, 21st and 22nd birthdays. However, the birthday celebration effect is not considered in our analysis.  
+
+Finally, we used linear regression to estimate the effect of legal access to alcohol to crime arrest rates while there are other regression models available. For example, the author of the dataset used polynomial regression. The different choices in regression method resulted in different estimates.  
+
+# Result and Analysis
+
+## MLDA and Assault Crime Arrests
+
+Assaults accounted for most of the sharp increase in arrests exactly at age 21. As Figure 2 shows, it is visually clear that there is a discontinuity at the cutoff. The result in Table 1 confirms that there is a significant increase of 9.28 (7.9%) arrests at age 21 for assault crimes. 
+
+```{r assault, include=TRUE, fig.height = 2.5, fig.width = 5, warning=FALSE, message= FALSE}
+#Plot assault cases
+top4_crimes_19_to_23 %>% 
+  ggplot(aes(x = days_to_21,
+             y = assault_r)) +
+  geom_point(alpha = 0.2) +
+  geom_smooth(data = top4_crimes_19_to_23 %>% filter(days_to_21 < 0), 
+              method='lm',
+              color = "black") +
+  geom_smooth(data = top4_crimes_19_to_23 %>% filter(days_to_21 >= 0), 
+              method='lm',
+              color = "black") +
+  theme_minimal() +
+  labs(x = "days_to_21",
+       y = "Assault arrest cases")
+```
+
+Figure 2. Effects of legal access to alcohol on assault crime arrests  
+
+```{r assault_table, include=TRUE, fig.width = 5}
+#Regression discontinuity model for assault crimes
+lm(assault_r ~ days_to_21 + mlda_and_over, data = top4_crimes_19_to_23) %>% 
+  tidy()
+```
+Table 1. Result of linear regression that estimates the effect of legal access to alcohol on assault crime arrests 
+
+### MLDA and Rape Crime Arrests
+
+The visual evidence of the discontinuity for rape arrest cases in Figure 3 is not as apparent as in assault crimes. However, Table 2 shows that there is a statistically significant increase in rape arrest cases at the age 21, estimated as 0.302 (9.1%). 
+
+```{r rape, include=TRUE, fig.height = 2.5, fig.width = 5, warning=FALSE, message= FALSE}
+#Plot rape cases
+top4_crimes_19_to_23 %>% 
+  ggplot(aes(x = days_to_21,
+             y = rape_r)) +
+  geom_point(alpha = 0.2) +
+  geom_smooth(data = top4_crimes_19_to_23 %>% filter(days_to_21 < 0), 
+              method='lm',
+              color = "black") +
+  geom_smooth(data = top4_crimes_19_to_23 %>% filter(days_to_21 >= 0), 
+              method='lm',
+              color = "black") +
+  theme_minimal() +
+  labs(x = "days_to_21",
+       y = "Rape arrest cases")
+```
+
+Figure 3. Effects of legal access to alcohol on rape crime arrests 
+
+```{r rape_table, include=TRUE}
+#Regression discontinuity model for Rape crimes
+lm(rape_r ~ days_to_21 + mlda_and_over, data = top4_crimes_19_to_23) %>% 
+  tidy()
+```
+
+Table 2. Result of linear regression that estimates the effect of legal access to alcohol on rape crime arrests 
+
+### MLDA and Murder Crime Arrests
+
+In Figure 4. there is no clear visual evidence exhibited. However, in the corresponding regression estimate shown in Table 3, the increase in murder arrest rate at age 21 is statistically significant. There is a 0.269 (8.9%) increase in murder arrest rate at the threshold.   
+
+```{r murder, include=TRUE, fig.height = 2.5, fig.width = 5, warning=FALSE, message= FALSE}
+#Plot murder cases
+top4_crimes_19_to_23 %>% 
+  ggplot(aes(x = days_to_21,
+             y = murder_r)) +
+  geom_point(alpha = 0.2) +
+  geom_smooth(data = top4_crimes_19_to_23 %>% filter(days_to_21 < 0), 
+              method='lm',
+              color = "black") +
+  geom_smooth(data = top4_crimes_19_to_23 %>% filter(days_to_21 >= 0), 
+              method='lm',
+              color = "black") +
+  theme_minimal() +
+  labs(x = "days_to_21",
+       y = "Murder arrest cases")
+```
+
+Figure 4. Effects of legal access to alcohol on murder crime arrests 
+
+```{r murder_table, include=TRUE}
+#Regression discontinuity model for Murder crimes
+lm(murder_r ~ days_to_21 + mlda_and_over, data = top4_crimes_19_to_23) %>% 
+  tidy()
+```
+
+Table 3. Result of linear regression that estimates the effect of legal access to alcohol on murder crime arrests 
+
+### MLDA and Arson Crime Arrests
+
+Comparing to the other crimes, the increases in arrests for arson crime is substantially smaller. Arson crime arrest increases by 0.050 which is not a statistically significant increase. However, we hesitate to exclude the correlation because the number of arson arrest cases are very small, and the result might be limited by statistical precision in this analysis.  
+
+```{r arson, include=TRUE, fig.height = 2.5, fig.width = 5, warning=FALSE, message= FALSE}
+#Plot arson cases
+top4_crimes_19_to_23 %>% 
+  ggplot(aes(x = days_to_21,
+             y = arson_r)) +
+  geom_point(alpha = 0.2) +
+  geom_smooth(data = top4_crimes_19_to_23 %>% filter(days_to_21 < 0), 
+              method='lm',
+              color = "black") +
+  geom_smooth(data = top4_crimes_19_to_23 %>% filter(days_to_21 >= 0), 
+              method='lm',
+              color = "black") +
+  theme_minimal() +
+  labs(x = "days_to_21",
+       y = "Arson arrest cases")
+```
+
+Figure 5. Effects of legal access to alcohol on arson crime arrests
+
+```{r arson_table, include=TRUE}
+#Regression discontinuity model for Arson crimes
+lm(arson_r ~ days_to_21 + mlda_and_over, data = top4_crimes_19_to_23) %>% 
+  tidy()
+```
+
+Table 4. Result of linear regression that estimates the effect of legal access to alcohol on arson crime arrests 
+
+
+\pagebreak
+# Appendix A
+```{r markdown_code, include=TRUE, ref.label=knitr::all_labels(), echo = T, eval = F, tidy=TRUE, tidy.opts=list(width.cutoff=60), results='asis'}
+```
+
+\pagebreak
+# References
+Baptiste Auguie (2017). gridExtra: Miscellaneous Functions for "Grid" Graphics. R package version 2.3. https://CRAN.R-project.org/package=gridExtra 
+
+Billings, S. B. (2010). Local Option and Crime: A Quasi-Experimental Approach to Evaluating County Alcohol Policies. SSRN Electronic Journal. doi: 10.2139/ssrn.1542726 
+
+Carpenter, C., & Dobkin, C. (2015). The Minimum Legal Drinking Age and Crime. Review of Economics and Statistics, 97(2), 521–524. doi: 10.1162/rest_a_00489 
+
+Corman, H., & Mocan, N. (2015). Alcohol Consumption, Deterrence and Crime in New York City. Journal of Labor Research, 36(2), 103–128. doi: 10.1007/s12122-015-9201-4 
+
+David Hugh-Jones (2020). huxable: Easily Create and Style Tables for LaTeX, HTML and Other Formats. R package version 4.7.1. https://cran.r-project.org/web/packages/huxtable 
+
+Gertler, P. J. (2016). Impact evaluation in practice. Washington: World Bank. 
+
+Hadley Wickham and Lionel Henry (2019). tidyr: Tidy Messy Data. R package version 1.0.0. 
+
+https://CRAN.R-project.org/package=tidyr 
+  
+
+Hadley Wickham, Romain François, Lionel Henry and Kirill Müller (2018). dplyr: A Grammar of Data Manipulation. R package version 
+
+  0.7.6. https://CRAN.R-project.org/package=dplyr 
+
+Long JA (2019). _jtools: Analysis and Presentation of Social Scientific Data_. R package version 2.0.1, <URL: https://cran.r-project.org/package=jtools>. 
+
+Peterson, L. (2015, February 25). The drinking age: The ethics behind change. Santa Clara University. https://www.scu.edu/the-big-q/the-big-q-blog/the-drinking-age-the-ethics-behind-change.html 
+
+R Core Team (2019). R: A language and environment for statistical computing.   
+
+
+R Foundation for Statistical Computing, Vienna, Austria. URL https://www.R-project.org/.  
+
+The Drinking Age, Alcohol Consumption, and Crime. (n.d.). Retrieved April 8, 2020, from https://conference.nber.org/conferences/2008/si2008/CRI/dobkin.pdf 
+
+Wickham et al., (2019). Welcome to the tidyverse. Journal of Open Source Software, 
+
+4(43), 1686, https://doi.org/10.21105/joss.01686 
+
+Wickham H (2016). ggplot2: Elegant Graphics for Data Analysis. Springer-Verlag New York. ISBN 978-3-319-24277-4, https://ggplot2.tidyverse.org. 
+
+  
+Yihui Xie (2019). knitr: A General-Purpose Package for Dynamic Report Generation in R. R package version 1.25. 
+
+Yihui Xie (2015) Dynamic Documents with R and knitr. 2nd edition. Chapman and Hall/CRC. ISBN 978-1498716963 
+
+Youth crimes spike immediately after drinking age. (2016, August 31). Retrieved April 8, 2020, from https://www.sciencedaily.com/releases/2016/08/160831102834.htm 
