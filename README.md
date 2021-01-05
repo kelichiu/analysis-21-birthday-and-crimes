@@ -1,5 +1,5 @@
 # 21st birthdays come with more Assault, Rape, and Murder arrests
-In collaboration with [diegoarmaca](https://github.com/diegoarmaca) and Sharon Allman
+In collaboration with [Diego Mamanche Castellanos](https://github.com/diegoarmaca) and [Sharon Allman](https://github.com/seallman)
 
 ## Summary of Findings
 Through the replication data from The Minimum Legal Drinking Age and Crime by Christopher Carpenter and Carlos Dobkin (2015), we sought to elaborate on the findings of Billings (2014) in their research on the age-prohibition of alcohol and potentially increased propensity for crime.  We found that the most alcohol-consumption-related crimes of assault, rape, and murder all had statistically significant increases at age 21, while arson did not have a statistically significant increase. 
